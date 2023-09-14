@@ -3,8 +3,12 @@ import express from "express";
 import bodyParser from "body-parser";
 import ejs from "ejs";
 import mongoose from "mongoose";
-import encrypt from "mongoose-encryption"
-
+import encrypt from "mongoose-encryption";
+import dotenv from "dotenv";
+import md5 from "md5";
+import bcrypt from "bcrypt";
+const saltRounds = 10;
+dotenv.config();
 const app = express();
 const port = 3000;
 const DBName = "authentication";
@@ -27,8 +31,9 @@ const userSchema = mongoose.Schema({
     email: { type: String, unique: true },
     password: String,
 });
-const secret = "thisissecret";
-userSchema.plugin(encrypt, { secret: secret, encryptedFields: ['password'] });
+// Encrypt
+// const secret = process.env.secret;
+// userSchema.plugin(encrypt, { secret: secret, encryptedFields: ['password'] });
 const User = mongoose.model("user", userSchema);
 
 app.get("/", (req, res) => {
@@ -49,30 +54,47 @@ app.get("/submit", (req, res) => {
 
 app.post("/register", (req, res) => {
     const email = req.body.username;
-    const password = req.body.password;
-    const newUser = new User({
-        email: email,
-        password: password,
+    // Hash md5
+    // const password = md5(req.body.password);
+    bcrypt.hash(req.body.password, saltRounds, function (err, hash) {
+        if (err) {
+            console.log(err);
+        } else {
+            const newUser = new User({
+                email: email,
+                password: hash,
+            });
+            newUser
+                .save()
+                .then((user) =>
+                    console.log("save user success", user.email, "-", user.password)
+                )
+                .then(res.redirect("/secrets"));
+        }
     });
-    newUser
-        .save()
-        .then((user) => console.log("save user success", user.email, "-", user.password))
-        .then(res.redirect("/secrets"));
 });
 
 app.post("/login", (req, res) => {
     const email = req.body.username;
-    const password = req.body.password;
+    // Hash md5
+    //   const password = md5(req.body.password);
+
 
     User.findOne({ email: email })
         .then((user) => {
             if (!user) {
                 console.log("khong ton tai user");
-            } else if (user.password !== password) {
-                console.log("mat khau khong dung");
             } else {
-                console.log("login success");
-                res.redirect("/secrets");
+                bcrypt.compare(req.body.password, user.password, function (err, result) {
+                    if (err) {
+                        console.log(err);
+                    } else if (result === false) {
+                        console.log("mat khau khong dung");
+                    } else {
+                        console.log("login success");
+                        res.redirect("/secrets");
+                    }
+                });
             }
         })
         .catch((err) => {
