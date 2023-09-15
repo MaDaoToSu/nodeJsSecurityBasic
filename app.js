@@ -7,6 +7,9 @@ import encrypt from "mongoose-encryption";
 import dotenv from "dotenv";
 import md5 from "md5";
 import bcrypt from "bcrypt";
+import passport from "passport";
+import passportLocalMongoose from "passport-local-mongoose";
+import session from "express-session";
 const saltRounds = 10;
 dotenv.config();
 const app = express();
@@ -79,22 +82,25 @@ app.post("/login", (req, res) => {
     // Hash md5
     //   const password = md5(req.body.password);
 
-
     User.findOne({ email: email })
         .then((user) => {
             if (!user) {
                 console.log("khong ton tai user");
             } else {
-                bcrypt.compare(req.body.password, user.password, function (err, result) {
-                    if (err) {
-                        console.log(err);
-                    } else if (result === false) {
-                        console.log("mat khau khong dung");
-                    } else {
-                        console.log("login success");
-                        res.redirect("/secrets");
+                bcrypt.compare(
+                    req.body.password,
+                    user.password,
+                    function (err, result) {
+                        if (err) {
+                            console.log(err);
+                        } else if (result === false) {
+                            console.log("mat khau khong dung");
+                        } else {
+                            console.log("login success");
+                            res.redirect("/secrets");
+                        }
                     }
-                });
+                );
             }
         })
         .catch((err) => {
